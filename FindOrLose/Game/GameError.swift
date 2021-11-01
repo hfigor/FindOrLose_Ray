@@ -1,4 +1,4 @@
-/// Copyright (c) 2020 Razeware LLC
+/// Copyright (c) 2021 Razeware LLC
 /// 
 /// Permission is hereby granted, free of charge, to any person obtaining a copy
 /// of this software and associated documentation files (the "Software"), to deal
@@ -28,31 +28,15 @@
 
 import Foundation
 
-enum UnsplashAPI {
-  static let accessToken = "KNHlSuO8ZNCPXD-NApXNf2PtyMntgiNX8XH0N7mFi44"
-
-  static func randomImage(completion: @escaping (RandomImageResponse?) -> Void) {
-    let url = URL(string: "https://api.unsplash.com/photos/random/?client_id=\(accessToken)")!
-
-    let config = URLSessionConfiguration.default
-    config.requestCachePolicy = .reloadIgnoringLocalCacheData
-    config.urlCache = nil
-    let session = URLSession(configuration: config)
-
-    var urlRequest = URLRequest(url: url)
-    urlRequest.addValue("Accept-Version", forHTTPHeaderField: "v1")
-
-    session.dataTask(with: urlRequest) { data, response, error in
-      guard
-        let httpURLResponse = response as? HTTPURLResponse, httpURLResponse.statusCode == 200,
-        let data = data, error == nil,
-        let decodedResponse = try? JSONDecoder().decode(RandomImageResponse.self, from: data)
-        else {
-          completion(nil)
-          return
-      }
-
-      completion(decodedResponse)
-    }.resume()
+enum GameError: Error {
+  case statusCode
+  case Decoding
+  case invalidImage
+  case invalidURL
+  case other(Error)
+  
+  static func map(_ error: Error) -> GameError {  // horrible choice of function name
+    return (error as? GameError) ?? .other(error)
   }
 }
+

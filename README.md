@@ -8,4 +8,6 @@ Apr 6 2020 · Article (20 mins) · Beginner
 Version
 Swift 5, iOS 13, Xcode 11
 
+Branch combineSetup does the initial import of combine and sets randomImage to return a publisher
+
 

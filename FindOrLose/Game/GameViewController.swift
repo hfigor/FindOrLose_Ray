@@ -46,7 +46,27 @@ class GameViewController: UIViewController {
   }
 
   var gameImages: [UIImage] = []
-  var gameTimer: Timer?
+/*  var gameTimer: Timer?
+ Timer is another Foundation type that has had Combine functionality added to it. You're going to migrate across to the Combine version to see the differences.
+*/
+  var gameTimer: AnyCancellable?
+  /*
+   You're now storing a subscription to the timer, rather than the timer itself. This can be represented with AnyCancellable in Combine.
+   From xcode docs via cmd+click
+   /// A type-erasing cancellable object that executes a provided closure when canceled.
+   ///
+   /// Subscriber implementations can use this type to provide a “cancellation token” that makes it possible for a caller to cancel a publisher, but not to use the ``Subscription`` object to request items.
+   ///
+   /// An ``AnyCancellable`` instance automatically calls ``Cancellable/cancel()`` when deinitialized.
+   
+   /// Cancel the activity.
+   ///
+   /// When implementing ``Cancellable`` in support of a custom publisher, implement `cancel()` to request that your publisher stop calling its downstream subscribers. Combine doesn't require that the publisher stop immediately, but the `cancel()` call should take effect quickly. Canceling should also eliminate any strong references it currently holds.
+   ///
+   /// After you receive one call to `cancel()`, subsequent calls shouldn't do anything. Additionally, your implementation must be thread-safe, and it shouldn't block the caller.
+   ///
+   /// > Tip: Keep in mind that your `cancel()` may execute concurrently with another call to `cancel()` --- including the scenario where an ``AnyCancellable`` is deallocating --- or to ``Subscription/request(_:)``.
+   */
   var gameLevel = 0
   var gameScore = 0
 
@@ -90,7 +110,8 @@ class GameViewController: UIViewController {
   // MARK: - Game Functions
 
   func playGame() {
-    gameTimer?.invalidate()
+    //gameTimer?.invalidate()
+    gameTimer?.cancel()
 
     gameStateButton.setTitle("Stop", for: .normal)
 
@@ -131,6 +152,25 @@ class GameViewController: UIViewController {
         self.gameScoreLabel.text = "Score: \(self.gameScore)"
         
         // TODO: Handle game score
+        /*
+         don't know how I would know to make these timer calls since type-ahead does not match this at all
+        Here's the breakdown:
+        You use the new API for vending publishers from Timer. The publisher will repeatedly send the current date at the given interval, on the given run loop.
+        The publisher is a special type of publisher that needs to be explicitly told to start or stop. The .autoconnect operator takes care of this by connecting or disconnecting as soon as subscriptions start or are canceled.
+        The publisher can't ever fail, so you don't need to deal with a completion. In this case, sink makes a subscriber that just processes values using the closure you supply.
+        */
+        self.gameTimer = Timer.publish(every: 0.1, on: RunLoop.main, in: .common)
+          .autoconnect()
+          .sink { [unowned self] _ in
+            self.gameScoreLabel.text = "Score: \(self.gameScore)"
+            self.gameScore -= 10
+            if self.gameScore <= 0 {
+              self.gameScore = 0
+              //timer.invalidate()
+              self.gameTimer?.cancel()
+            }
+            
+          }
         
         self.stopLoaders()
         self.setImages()
@@ -192,7 +232,11 @@ class GameViewController: UIViewController {
   }
 
   func stopGame() {
-    gameTimer?.invalidate()
+    //gameTimer?.invalidate()
+    // Here, you iterate over all subscriptions and cancel them.
+    subscriptions.forEach { $0.cancel()}
+    
+    gameTimer?.cancel()
 
     gameStateButton.setTitle("Play", for: .normal)
 
@@ -218,6 +262,8 @@ class GameViewController: UIViewController {
   }
 
   func resetImages() {
+    // Here, you assign an empty array that will remove all the references to the unused subscriptions.
+    subscriptions = []
     gameImages = []
 
     gameImageView.forEach { $0.image = nil }
